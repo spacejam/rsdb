@@ -1,2 +1,3 @@
 # rsdb
-rust database engineering toolkit
+
+a simple database
