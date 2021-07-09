@@ -1,14 +1,14 @@
 #[cfg(feature = "shred_allocations_on_free")]
 mod alloc {
-    use std::alloc::{Layout, System};
+    use std::alloc::{GlobalAlloc, Layout, System};
 
     #[global_allocator]
-    static ALLOCATOR: Alloc = Alloc;
+    static ALLOCATOR: ShredAlloc = ShredAlloc;
 
     #[derive(Default, Debug, Clone, Copy)]
-    struct Alloc;
+    struct ShredAlloc;
 
-    unsafe impl std::alloc::GlobalAlloc for Alloc {
+    unsafe impl GlobalAlloc for ShredAlloc {
         unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
             let ret = System.alloc(layout);
             assert_ne!(ret, std::ptr::null_mut());
@@ -25,15 +25,15 @@ mod alloc {
 
 #[cfg(feature = "no_allocations_allowed")]
 mod alloc {
-    use std::alloc::{Layout, System};
+    use std::alloc::{GlobalAlloc, Layout, System};
 
     #[global_allocator]
-    static ALLOCATOR: Alloc = Alloc;
+    static ALLOCATOR: NoAlloc = NoAlloc;
 
     #[derive(Default, Debug, Clone, Copy)]
-    struct Alloc;
+    struct NoAlloc;
 
-    unsafe impl std::alloc::GlobalAlloc for Alloc {
+    unsafe impl GlobalAlloc for NoAlloc {
         unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
             panic!("alloc called while no_allocations_allowed feature was on")
         }
