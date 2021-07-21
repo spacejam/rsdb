@@ -8,6 +8,7 @@ mod ebr;
 mod io_uring;
 mod lazy;
 mod log;
+mod optimistic_access_cell;
 //mod pagetable;
 mod ring_buffer;
 mod sql;
