@@ -109,7 +109,7 @@ pub struct Config {
     /// CURRENTLY UNSUPPORTED
     pub io_poll: bool,
     /// setting `raw_params` overrides everything else
-    pub raw_params: Option<io_uring_params>,
+    pub raw_params: Option<Params>,
 }
 
 impl Default for Config {
@@ -130,7 +130,7 @@ impl Config {
         let mut params = if let Some(params) = self.raw_params.take() {
             params
         } else {
-            let mut params = io_uring_params::default();
+            let mut params = Params::default();
 
             if self.sq_poll {
                 // set SQPOLL mode to avoid needing wakeup
@@ -141,7 +141,7 @@ impl Config {
             params
         };
 
-        let params_ptr: *mut io_uring_params = &mut params;
+        let params_ptr: *mut Params = &mut params;
 
         let ring_fd = setup(u32::try_from(self.depth).unwrap(), params_ptr)?;
 
@@ -181,7 +181,7 @@ impl Config {
     }
 }
 
-pub(crate) fn setup(entries: c_uint, p: *mut io_uring_params) -> io::Result<c_int> {
+pub(crate) fn setup(entries: c_uint, p: *mut Params) -> io::Result<c_int> {
     assert!(
         (1..=4096).contains(&entries),
         "entries must be between 1 and 4096 (inclusive)"
@@ -262,45 +262,45 @@ pub(crate) fn register(
 }
 
 /// A trait for describing transformations from the
-/// `io_uring_cqe` type into an expected meaningful
+/// `Cqe` type into an expected meaningful
 /// high-level result.
 pub trait FromCqe {
     /// Describes a conversion from a successful
-    /// `io_uring_cqe` to a desired output type.
-    fn from_cqe(cqe: io_uring_cqe) -> Self;
+    /// `Cqe` to a desired output type.
+    fn from_cqe(cqe: Cqe) -> Self;
 }
 
 impl FromCqe for usize {
-    fn from_cqe(cqe: io_uring_cqe) -> usize {
+    fn from_cqe(cqe: Cqe) -> usize {
         usize::try_from(cqe.res).unwrap()
     }
 }
 
 impl FromCqe for () {
-    fn from_cqe(_: io_uring_cqe) {}
+    fn from_cqe(_: Cqe) {}
 }
 
 impl FromCqe for File {
-    fn from_cqe(cqe: io_uring_cqe) -> File {
+    fn from_cqe(cqe: Cqe) -> File {
         unsafe { File::from_raw_fd(cqe.res) }
     }
 }
 
 impl FromCqe for TcpStream {
-    fn from_cqe(cqe: io_uring_cqe) -> TcpStream {
+    fn from_cqe(cqe: Cqe) -> TcpStream {
         unsafe { TcpStream::from_raw_fd(cqe.res) }
     }
 }
 
 impl FromCqe for TcpListener {
-    fn from_cqe(cqe: io_uring_cqe) -> TcpListener {
+    fn from_cqe(cqe: Cqe) -> TcpListener {
         unsafe { TcpListener::from_raw_fd(cqe.res) }
     }
 }
 
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
-pub struct io_uring_cqe {
+pub struct Cqe {
     pub user_data: u64,
     pub res: i32,
     pub flags: u32,
@@ -308,7 +308,7 @@ pub struct io_uring_cqe {
 
 #[repr(C)]
 #[derive(Default, Debug, Copy, Clone)]
-pub struct io_uring_params {
+pub struct Params {
     pub sq_entries: u32,
     pub cq_entries: u32,
     pub flags: u32,
@@ -323,7 +323,7 @@ pub type __kernel_rwf_t = ::std::os::raw::c_int;
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug, Default)]
-pub struct io_uring_sqe {
+pub struct Sqe {
     pub opcode: u8,
     pub flags: u8,
     pub ioprio: u16,
@@ -331,12 +331,12 @@ pub struct io_uring_sqe {
     pub off: u64,
     pub addr: u64,
     pub len: u32,
-    pub __bindgen_anon_1: io_uring_sqe__bindgen_ty_1,
+    pub __bindgen_anon_1: Sqe__bindgen_ty_1,
     pub user_data: u64,
-    pub __bindgen_anon_2: io_uring_sqe__bindgen_ty_2,
+    pub __bindgen_anon_2: Sqe__bindgen_ty_2,
 }
 
-impl io_uring_sqe {
+impl Sqe {
     pub(crate) fn prep_rw(
         &mut self,
         opcode: u8,
@@ -345,7 +345,7 @@ impl io_uring_sqe {
         off: u64,
         ordering: EventOrdering,
     ) {
-        *self = io_uring_sqe {
+        *self = Sqe {
             opcode,
             flags: 0,
             ioprio: 0,
@@ -372,7 +372,7 @@ impl io_uring_sqe {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub union io_uring_sqe__bindgen_ty_1 {
+pub union Sqe__bindgen_ty_1 {
     pub rw_flags: __kernel_rwf_t,
     pub fsync_flags: u32,
     pub poll_events: u16,
@@ -381,8 +381,8 @@ pub union io_uring_sqe__bindgen_ty_1 {
     _bindgen_union_align: u32,
 }
 
-impl Default for io_uring_sqe__bindgen_ty_1 {
-    fn default() -> io_uring_sqe__bindgen_ty_1 {
+impl Default for Sqe__bindgen_ty_1 {
+    fn default() -> Sqe__bindgen_ty_1 {
         #[allow(unsafe_code)]
         unsafe {
             std::mem::zeroed()
@@ -390,28 +390,28 @@ impl Default for io_uring_sqe__bindgen_ty_1 {
     }
 }
 
-impl fmt::Debug for io_uring_sqe__bindgen_ty_1 {
+impl fmt::Debug for Sqe__bindgen_ty_1 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "io_uring_sqe__bindgen_ty_1")
+        write!(f, "Sqe__bindgen_ty_1")
     }
 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub union io_uring_sqe__bindgen_ty_2 {
+pub union Sqe__bindgen_ty_2 {
     pub buf_index: u16,
     pub __pad2: [u64; 3_usize],
     _bindgen_union_align: [u64; 3_usize],
 }
 
-impl fmt::Debug for io_uring_sqe__bindgen_ty_2 {
+impl fmt::Debug for Sqe__bindgen_ty_2 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "io_uring_sqe__bindgen_ty_2")
+        write!(f, "Sqe__bindgen_ty_2")
     }
 }
 
-impl Default for io_uring_sqe__bindgen_ty_2 {
-    fn default() -> io_uring_sqe__bindgen_ty_2 {
+impl Default for Sqe__bindgen_ty_2 {
+    fn default() -> Sqe__bindgen_ty_2 {
         #[allow(unsafe_code)]
         unsafe {
             std::mem::zeroed()
@@ -915,7 +915,7 @@ impl Uring {
 
     /// Writes data at the provided buffer using
     /// vectored IO. Be sure to check the returned
-    /// `io_uring_cqe`'s `res` field to see if a
+    /// `Cqe`'s `res` field to see if a
     /// short write happened. This will contain
     /// the number of bytes written.
     ///
@@ -934,7 +934,7 @@ impl Uring {
     /// vectored IO.
     ///
     /// Be sure to check the returned
-    /// `io_uring_cqe`'s `res` field to see if a
+    /// `Cqe`'s `res` field to see if a
     /// short write happened. This will contain
     /// the number of bytes written.
     ///
@@ -972,7 +972,7 @@ impl Uring {
     /// Reads data into the provided buffer from the
     /// given file-like object, at the given offest,
     /// using vectored IO. Be sure to check the returned
-    /// `io_uring_cqe`'s `res` field to see if a
+    /// `Cqe`'s `res` field to see if a
     /// short read happened. This will contain
     /// the number of bytes read.
     ///
@@ -989,7 +989,7 @@ impl Uring {
 
     /// Reads data into the provided buffer using
     /// vectored IO. Be sure to check the returned
-    /// `io_uring_cqe`'s `res` field to see if a
+    /// `Cqe`'s `res` field to see if a
     /// short read happened. This will contain
     /// the number of bytes read.
     ///
@@ -1068,7 +1068,7 @@ impl Uring {
         f: F,
     ) -> Completion<'a, C>
     where
-        F: FnOnce(&mut io_uring_sqe),
+        F: FnOnce(&mut Sqe),
         C: FromCqe,
     {
         let ticket = self.ticket_queue.pop();
@@ -1156,7 +1156,7 @@ pub(crate) struct Sq {
     kflags: *mut AtomicU32,
     kdropped: *mut AtomicU32,
     array: &'static mut [AtomicU32],
-    sqes: &'static mut [io_uring_sqe],
+    sqes: &'static mut [Sqe],
     sqe_head: u32,
     sqe_tail: u32,
     ring_ptr: *const libc::c_void,
@@ -1177,7 +1177,7 @@ impl Drop for Sq {
 }
 
 impl Sq {
-    pub(crate) fn new(params: &io_uring_params, ring_fd: i32) -> io::Result<Sq> {
+    pub(crate) fn new(params: &Params, ring_fd: i32) -> io::Result<Sq> {
         let sq_ring_mmap_sz = params.sq_off.array as usize
             + (params.sq_entries as usize * std::mem::size_of::<u32>());
 
@@ -1185,9 +1185,9 @@ impl Sq {
 
         let sq_ring_ptr = uring_mmap(sq_ring_mmap_sz, ring_fd, IORING_OFF_SQ_RING)?;
 
-        let sqes_mmap_sz: usize = params.sq_entries as usize * std::mem::size_of::<io_uring_sqe>();
+        let sqes_mmap_sz: usize = params.sq_entries as usize * std::mem::size_of::<Sqe>();
 
-        let sqes_ptr: *mut io_uring_sqe = uring_mmap(sqes_mmap_sz, ring_fd, IORING_OFF_SQES)? as _;
+        let sqes_ptr: *mut Sqe = uring_mmap(sqes_mmap_sz, ring_fd, IORING_OFF_SQES)? as _;
 
         Ok(unsafe {
             Sq {
@@ -1210,7 +1210,7 @@ impl Sq {
         })
     }
 
-    pub(crate) fn try_get_sqe(&mut self, ring_flags: u32) -> Option<&mut io_uring_sqe> {
+    pub(crate) fn try_get_sqe(&mut self, ring_flags: u32) -> Option<&mut Sqe> {
         let next = self.sqe_tail + 1;
 
         let head = if (ring_flags & IORING_SETUP_SQPOLL) == 0 {
@@ -1385,7 +1385,7 @@ pub struct Cq {
     ktail: *mut AtomicU32,
     kring_mask: *mut u32,
     koverflow: *mut AtomicU32,
-    cqes: *mut [io_uring_cqe],
+    cqes: *mut [Cqe],
     ticket_queue: Arc<TicketQueue>,
     in_flight: Arc<InFlight>,
     ring_ptr: *const libc::c_void,
@@ -1406,14 +1406,14 @@ impl Drop for Cq {
 
 impl Cq {
     pub(crate) fn new(
-        params: &io_uring_params,
+        params: &Params,
         ring_fd: i32,
         in_flight: Arc<InFlight>,
         ticket_queue: Arc<TicketQueue>,
     ) -> io::Result<Cq> {
         // TODO IORING_FEAT_SINGLE_MMAP for cq
-        let cq_ring_mmap_sz = params.cq_off.cqes as usize
-            + (params.cq_entries as usize * std::mem::size_of::<io_uring_cqe>());
+        let cq_ring_mmap_sz =
+            params.cq_off.cqes as usize + (params.cq_entries as usize * std::mem::size_of::<Cqe>());
 
         let cq_ring_ptr = uring_mmap(cq_ring_mmap_sz, ring_fd, IORING_OFF_CQ_RING)?;
 
@@ -1589,7 +1589,7 @@ impl<A: ?Sized + AsMut<[u8]>> AsIoVecMut for A {}
 #[derive(Debug)]
 struct CompletionState {
     done: bool,
-    item: Option<io::Result<io_uring_cqe>>,
+    item: Option<io::Result<Cqe>>,
 }
 
 impl Default for CompletionState {
@@ -1687,7 +1687,7 @@ impl<'a, C: FromCqe> Drop for Completion<'a, C> {
 
 impl Filler {
     /// Complete the `Completion`
-    pub fn fill(self, inner: io::Result<io_uring_cqe>) {
+    pub fn fill(self, inner: io::Result<Cqe>) {
         let mut state = self.mu.lock().unwrap();
 
         state.item = Some(inner);
