@@ -1,3 +1,3 @@
 # rsdb
 
-a simple database
+a collection of components that are useful for database projects
