@@ -4,11 +4,11 @@ mod alloc;
 mod btree;
 mod buffer_pool;
 mod debug_delay;
-mod ebr;
-mod io_uring;
-mod lazy;
+pub mod ebr;
+pub mod io_uring;
+pub mod lazy;
 mod log;
-mod optimistic_access_cell;
+pub mod optimistic_access_cell;
 //mod pagetable;
 mod ring_buffer;
 mod sql;
@@ -25,7 +25,7 @@ use debug_delay::debug_delay;
 const fn debug_delay() {}
 
 #[repr(align(128))]
-struct CachePadded<T>(T);
+pub struct CachePadded<T>(T);
 
 pub struct Rsdb {
     system_catalogue: BTree,
