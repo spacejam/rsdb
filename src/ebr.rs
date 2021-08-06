@@ -1,7 +1,7 @@
 //! Simple, CPU cache-friendly epoch-based reclamation (EBR).
 //!
 //! ```rust
-//! use ebr::Ebr;
+//! use rsdb::ebr::Ebr;
 //!
 //! let mut ebr: Ebr<Box<u64>> = Ebr::default();
 //!

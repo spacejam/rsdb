@@ -15,6 +15,10 @@ pub struct OptimisticAccessCell<T: Send + 'static> {
     item: UnsafeCell<T>,
 }
 
+unsafe impl<T: Send> Send for OptimisticAccessCell<T> {}
+
+unsafe impl<T: Send> Sync for OptimisticAccessCell<T> {}
+
 struct DeferUnlock<'a, T: Send + 'static> {
     oac: &'a OptimisticAccessCell<T>,
 }
@@ -35,6 +39,7 @@ impl<T: Send + 'static> OptimisticAccessCell<T> {
         while self.version_lock.fetch_or(LOCKED, Acquire) & LOCKED == 0 {
             spin_loop()
         }
+
         // Use this dropper struct to unlock because it
         // will be dropped even if a panic happens in the
         // passed-in function.
@@ -57,6 +62,7 @@ impl<T: Send + 'static> OptimisticAccessCell<T> {
                 spin_loop();
                 vsn = self.version_lock.load(Acquire);
             }
+
             // access
             let ret = f(unsafe { &*self.item.get() });
 

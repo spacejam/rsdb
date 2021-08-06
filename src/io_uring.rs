@@ -1400,7 +1400,7 @@ impl<A: ?Sized + AsRef<[u8]>> AsIoVec for A {
 /// memory:
 ///
 /// ```compile_fail
-/// let ring = rio::new().unwrap();
+/// let ring = &rsdb::io_uring::IO_URING;
 /// let file = std::fs::File::open("failure").unwrap();
 ///
 /// // the following buffer is placed in
@@ -1410,14 +1410,14 @@ impl<A: ?Sized + AsRef<[u8]>> AsIoVec for A {
 ///
 /// // this fails to compile, because &[u8]
 /// // does not implement `AsIoVecMut`:
-/// ring.read_at(&file, &buffer, 0).unwrap();
+/// ring.read_at(&file, &buffer, 0, rsdb::io_uring::EventOrdering::None).unwrap();
 /// ```
 ///
 /// which can be fixed by making it a mutable
 /// slice:
 ///
 /// ```no_run
-/// let ring = rio::new().unwrap();
+/// let ring = &rsdb::io_uring::IO_URING;
 /// let file = std::fs::File::open("failure").unwrap();
 ///
 /// // the following buffer is placed in
@@ -1426,7 +1426,7 @@ impl<A: ?Sized + AsRef<[u8]>> AsIoVec for A {
 /// let buffer: &mut [u8] = &mut [0; 42];
 ///
 /// // this now works
-/// ring.read_at(&file, &buffer, 0).wait();
+/// ring.read_at(&file, &buffer, 0, rsdb::io_uring::EventOrdering::None).wait();
 /// ```
 pub trait AsIoVecMut {}
 

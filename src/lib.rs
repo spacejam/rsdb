@@ -14,7 +14,7 @@ mod ring_buffer;
 mod sql;
 mod stack;
 
-use btree::BTree;
+pub use btree::BTree;
 pub use io_uring::IO_URING;
 use lazy::Lazy;
 
